@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PII Redaction Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .api-key-section {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .api-key-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 500px;
+        }
+
+        .column {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-column {
+            border-right: 1px solid #e9ecef;
+        }
+
+        .column h2 {
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .textarea {
+            flex: 1;
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 300px;
+            transition: border-color 0.3s ease;
+        }
+
+        .textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .redact-button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .redact-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .redact-button:active {
+            transform: translateY(0);
+        }
+
+        .redact-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result-textarea {
+            background-color: #f8f9fa;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-column {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PII Redaction Tool</h1>
+            <p>Safely remove personal information from text using Prediction Guard</p>
+        </div>
+        
+        <div class="api-key-section">
+            <label for="apiKey">Prediction Guard API Key:</label>
+            <input type="password" id="apiKey" class="api-key-input" placeholder="Enter your API key here...">
+        </div>
+        
+        <div class="main-content">
+            <div class="column left-column">
+                <h2>Original Text</h2>
+                <textarea 
+                    id="originalText" 
+                    class="textarea" 
+                    placeholder="Paste your text here. For example: My email is john.doe@example.com and my phone number is 555-123-4567."
+                ></textarea>
+                <button id="redactButton" class="redact-button">Redact PII</button>
+                <div id="loading" class="loading">Processing...</div>
+                <div id="message"></div>
+            </div>
+            
+            <div class="column">
+                <h2>Redacted Text</h2>
+                <textarea 
+                    id="redactedText" 
+                    class="textarea result-textarea" 
+                    readonly 
+                    placeholder="Redacted text will appear here..."
+                ></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiKeyInput = document.getElementById('apiKey');
+            const originalTextArea = document.getElementById('originalText');
+            const redactedTextArea = document.getElementById('redactedText');
+            const redactButton = document.getElementById('redactButton');
+            const loading = document.getElementById('loading');
+            const messageDiv = document.getElementById('message');
+
+            function showMessage(text, type = 'error') {
+                messageDiv.innerHTML = `<div class="${type}">${text}</div>`;
+                setTimeout(() => {
+                    messageDiv.innerHTML = '';
+                }, 5000);
+            }
+
+            function setLoading(isLoading) {
+                loading.style.display = isLoading ? 'block' : 'none';
+                redactButton.disabled = isLoading;
+                redactButton.textContent = isLoading ? 'Processing...' : 'Redact PII';
+            }
+
+            async function redactText() {
+                const apiKey = apiKeyInput.value.trim();
+                const text = originalTextArea.value.trim();
+
+                if (!apiKey) {
+                    showMessage('Please enter your API key.');
+                    return;
+                }
+
+                if (!text) {
+                    showMessage('Please enter some text to redact.');
+                    return;
+                }
+
+                setLoading(true);
+                messageDiv.innerHTML = '';
+
+                try {
+                    const response = await fetch('/api/redact', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            api_key: apiKey,
+                            text: text
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    if (data.checks && data.checks.length > 0 && data.checks[0].new_prompt) {
+                        redactedTextArea.value = data.checks[0].new_prompt;
+                        showMessage('Text successfully redacted!', 'success');
+                    } else {
+                        throw new Error('Unexpected response format from API');
+                    }
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    showMessage(`Error: ${error.message}`);
+                    redactedTextArea.value = '';
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            redactButton.addEventListener('click', redactText);
+
+            // Allow Enter key to trigger redaction (Ctrl+Enter or Cmd+Enter)
+            originalTextArea.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    redactText();
+                }
+            });
+
+            // Auto-resize textareas
+            function autoResize(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(300, textarea.scrollHeight) + 'px';
+            }
+
+            originalTextArea.addEventListener('input', () => autoResize(originalTextArea));
+            redactedTextArea.addEventListener('input', () => autoResize(redactedTextArea));
+        });
+    </script>
+</body>
+</html> 
